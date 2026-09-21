@@ -1,0 +1,23 @@
+# Python / Flask
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Flask / logs / runtime
+instance/
+*.log
+logs/
+*.sqlite3
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
