@@ -43,7 +43,7 @@ curl http://127.0.0.1:5000/health
 
 ---
 
-## 新概念：Blueprint
+## 新概念：Blueprint（蓝图）
 
 Flask Blueprint 可以理解为“路由分组工具”。
 
@@ -56,6 +56,18 @@ Blueprint 的作用是把不同业务模块的路由拆到不同文件中。
 - `bloggers.py`
 - `funds.py`
 - `initial_positions.py`
+
+### jsonify（JSON 响应工具）
+
+`jsonify` 是 Flask 提供的把 Python 字典转换成 JSON HTTP 响应的工具。
+
+它会做三件事：
+
+1. 把 Python 的 `dict` 转成 JSON 字符串。
+2. 设置响应头 `Content-Type: application/json`。
+3. 把这个 JSON 响应返回给客户端。
+
+如果不使用 `jsonify`，就需要自己调用 Python 标准库的 `json.dumps()`，并且手动设置响应头；否则前端拿到的可能不是标准的 JSON HTTP 响应。
 
 ---
 
@@ -146,6 +158,15 @@ def health():
         }
     )
 ```
+
+代码中出现的新对象：
+
+| 名称 | 说明 |
+| --- | --- |
+| `Blueprint` | 蓝图，用来给路由分组 |
+| `health_bp` | 这个健康检查路由分组的变量名 |
+| `@health_bp.get("/health")` | 把 `health()` 函数注册为 `/health` 接口 |
+| `jsonify` | JSON 响应工具，把 Python 字典转成 JSON HTTP 响应 |
 
 ---
 
