@@ -69,13 +69,46 @@
 
 ## 当前任务
 
-当前应执行任务 004。
-
-任务 004 文件：
+当前应执行的任务见：
 
 ```text
-docs/backend/tasks/004-query-parameters.md
+docs/backend/plans/README.md
 ```
+
+进度只记在那一个文件里。本文档只说明第 1–3 天包含哪些任务，不写当前进度——写两处就一定会有一处过期。
+
+第 1–3 天的任务文件：
+
+```text
+docs/backend/tasks/001-flask-hello-world.md
+docs/backend/tasks/002-project-structure-split.md
+docs/backend/tasks/003-success-response-function.md
+docs/backend/tasks/004-query-parameters.md
+docs/backend/tasks/005-error-response-function.md
+docs/backend/tasks/006-mysql-basic-connection.md
+docs/backend/tasks/007-init-basic-tables.md
+docs/backend/tasks/008-blogger-list-api.md
+docs/backend/tasks/009-create-blogger-api.md
+docs/backend/tasks/010-blogger-detail-update-delete.md
+docs/backend/tasks/011-fund-list-create-update.md
+docs/backend/tasks/012-initial-position-list-create-update.md
+docs/backend/tasks/013-manual-integration-and-acceptance.md
+```
+
+## 接口契约
+
+第 1–3 天的三个模块（博主、基金、初始持仓）接口文档：
+
+```text
+docs/api/v1-basic-management.md
+```
+
+任务 008–013 都以它为准。发现文档说不通的地方，反馈，不要自己改。
+
+两条容易踩的约定：
+
+1. **成功响应统一返回 HTTP `200`**，新增接口也不返回 `201`。`success()` 没有 `http_status` 参数，传了会报 `TypeError`。
+2. **列表接口的 `sort_by` 必须走白名单**，`page_size` 上限 `100`。排序字段是拼进 SQL 的，去掉白名单就是 SQL 注入。
 
 ## 验收节奏
 
@@ -83,7 +116,9 @@ docs/backend/tasks/004-query-parameters.md
 
 1. 修改或新增的文件列表。
 2. 验证命令和输出。
-3. 遇到的问题。
-4. 是否有未完成项。
+3. 响应字段是否和 `docs/api/v1-basic-management.md` 一致（从任务 008 起）。
+4. 有没有发现接口文档说不通的地方。
+5. 遇到的问题。
+6. 是否有未完成项。
 
 只有任务验收通过后，才继续下一个任务。
