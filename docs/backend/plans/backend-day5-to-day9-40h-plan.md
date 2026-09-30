@@ -32,9 +32,9 @@
 
 **第 5 天的任务编号（018–022）已确定**，任务文档已经写好。
 
-**第 6–9 天表格里的任务编号是暂定的。** 主题和顺序不会变，但每天具体拆成几个任务、编号是多少，要等上一天验收完、看清实际进度后再定。原因是第 5 天已经从原计划的 4 个任务变成 5 个，如果现在把后面 16 个编号都钉死，一旦中间再插入任务就要把所有文档重新编号，交叉引用全部失效。
+**第 5–9 天的任务编号已全部确定：第 5 天是 018–022，第 6 天是 023–028，第 7 天是 029–032，第 8 天是 033–036，第 9 天是 037–040。**
 
-所以：**看到第 6–9 天的编号时，请以「主题」为准，不要以编号为准。** 每天的任务文档会在前一天验收通过后生成。
+后续如果插入新任务，不能随意占用已生成任务的编号；可以在后续新计划中继续编号，或在允许的位置插入字母后缀编号（例如 `036A`），并同步更新所有交叉引用。
 
 ## 总目标
 
@@ -57,10 +57,10 @@
 | 天数 | 主题 | 任务范围 | 预计工时 |
 | --- | --- | --- | --- |
 | 第 5 天 | 日常操作记录基础模块 | 018–022（已确定） | 8 小时 |
-| 第 6 天 | 净值数据基础模块 | 待定，约 5 个任务 | 8 小时 |
-| 第 7 天 | 持仓快照模块 | 待定，约 4 个任务 | 8 小时 |
-| 第 8 天 | 简单收益计算 | 待定，约 4 个任务 | 8 小时 |
-| 第 9 天 | 汇总看板与交付检查 | 待定，约 4 个任务 | 8 小时 |
+| 第 6 天 | 净值数据基础模块 | 023–028 | 8 小时 |
+| 第 7 天 | 持仓快照模块 | 029–032 | 8 小时 |
+| 第 8 天 | 简单收益计算 | 033–036（已确定） | 8 小时 |
+| 第 9 天 | 汇总看板与交付检查 | 037–040（已确定） | 8 小时 |
 
 合计：40 小时。
 
@@ -122,12 +122,12 @@ docs/api/v1-operations.md
 
 | 顺序 | 主题 | 预计工时 | 产出 |
 | --- | --- | --- | --- |
-| 1 | 统一分页与排序校验工具 | 1.5 小时 | 四个模块共用一份参数校验代码 |
-| 2 | 净值表设计 | 1 小时 | `nav_history` 表结构确认 |
-| 3 | 净值表创建和唯一约束 | 1 小时 | 同一基金同一天只允许一条净值 |
-| 4 | 净值手动录入接口 | 2 小时 | `POST /api/v1/nav-history` 可用 |
-| 5 | 净值 CSV 解析与校验 | 1.5 小时 | 能把上传的 CSV 解析成待入库的行，并逐行报错 |
-| 6 | 净值 CSV 导入入库 | 1 小时 | `POST /api/v1/nav-history/import` 可用 |
+| 1 | 023 统一分页与排序校验工具 | 1.5 小时 | 四个模块共用一份参数校验代码 |
+| 2 | 024 净值表设计 | 1 小时 | `docs/backend/design/nav-history-table-design.md` |
+| 3 | 025 净值表创建和唯一约束 | 1 小时 | `nav_history` 表 + 唯一约束 |
+| 4 | 026 净值手动录入接口 | 2 小时 | `POST /api/v1/nav-history` 可用 |
+| 5 | 027 净值 CSV 解析与校验 | 1.5 小时 | 能把上传的 CSV 解析成待入库的行，并逐行报错 |
+| 6 | 028 净值 CSV 导入入库 | 1 小时 | `POST /api/v1/nav-history/import` 可用 |
 
 合计 8 小时。
 
@@ -161,12 +161,24 @@ docs/api/v1-operations.md
 
 ## 第 7 天：持仓快照模块
 
-| 顺序 | 主题 | 预计工时 | 产出 |
+| 顺序 | 任务 | 预计工时 | 产出 |
 | --- | --- | --- | --- |
-| 1 | 日期与净值查询工具 | 2 小时 | 提供统一的数据读取辅助函数 |
-| 2 | 单个博主持仓快照计算 | 2 小时 | 能根据初始持仓和操作记录计算某日份额 |
-| 3 | 博主持仓快照接口 | 2 小时 | `GET /api/v1/bloggers/{blogger_id}/position-snapshots` 可用 |
-| 4 | 持仓快照测试 | 2 小时 | 覆盖买入、卖出、分红、无数据等场景 |
+| 1 | 029 快照日期与数据读取工具 | 2 小时 | `backend/app/utils/snapshot_data.py` |
+| 2 | 030 单个博主持仓快照计算 | 2 小时 | `backend/app/services/position_snapshot.py` |
+| 3 | 031 博主持仓快照接口 | 2 小时 | `GET /api/v1/bloggers/{blogger_id}/position-snapshots` |
+| 4 | 032 持仓快照测试 | 2 小时 | `backend/tests/test_position_snapshots.py` |
+
+合计 8 小时。
+
+### 第 7 天的接口契约
+
+持仓快照接口的接口文档在：
+
+```text
+docs/api/v1-position-snapshots.md
+```
+
+写代码前先读这份文档。接口字段一旦确定，变更必须同步更新文档，并通知前端。
 
 ### 持仓快照口径
 
@@ -175,17 +187,30 @@ docs/api/v1-operations.md
 - 卖出使用平均成本法。
 - 不做持久化快照缓存。
 - 第一版不校验超额卖出，所以计算出的剩余份额**可能为负**。接口照实返回，不要截断成 0，也不要报错——负数是给使用者看的信号，说明某笔操作录错了。
+- 第一版只返回份额和成本，不返回市值、收益金额和收益率。
 
 ---
 
 ## 第 8 天：简单收益计算
 
-| 顺序 | 主题 | 预计工时 | 产出 |
+| 顺序 | 任务 | 预计工时 | 产出 |
 | --- | --- | --- | --- |
-| 1 | 成本与市值计算 | 2 小时 | 能计算指定日期的成本、份额、市值 |
-| 2 | 单博主累计收益率接口 | 2 小时 | 返回简单累计收益率 |
-| 3 | 单基金收益汇总接口 | 2 小时 | 返回指定博主持有某只基金的收益 |
-| 4 | 总体收益汇总接口 | 2 小时 | 返回全部博主持仓汇总 |
+| 1 | 033 简单收益计算服务与精确净值查询工具 | 2 小时 | `calculate_position_returns()`、`calculate_total_returns()`、`get_nav_on_date_map()` |
+| 2 | 034 单博主累计收益率接口 | 2 小时 | `GET /api/v1/bloggers/{blogger_id}/returns` |
+| 3 | 035 单基金收益汇总接口 | 2 小时 | `GET /api/v1/bloggers/{blogger_id}/funds/{fund_id}/return` |
+| 4 | 036 总体收益汇总接口 | 2 小时 | `GET /api/v1/returns/summary` |
+
+合计 8 小时。
+
+### 第 8 天的接口契约
+
+简单收益的接口文档已经写好，前后端共用：
+
+```text
+docs/api/v1-returns.md
+```
+
+任务 033–036 都以它为准。开发过程中发现文档说不通的地方，反馈，不要自己改。
 
 ### 简单收益口径
 
@@ -216,12 +241,24 @@ docs/api/v1-operations.md
 
 ## 第 9 天：汇总看板与交付检查
 
-| 顺序 | 主题 | 预计工时 | 产出 |
+| 顺序 | 任务 | 预计工时 | 产出 |
 | --- | --- | --- | --- |
-| 1 | 博主总览看板接口 | 2 小时 | 返回博主数量、持仓数量、总成本、总市值、总收益率 |
-| 2 | 基金分布看板接口 | 2 小时 | 返回基金维度的成本、市值、占比 |
-| 3 | 近期操作统计接口 | 2 小时 | 返回近期买入、卖出、分红记录 |
-| 4 | 功能闭环验收与文档同步 | 2 小时 | 完成联调清单、需求/接口文档同步 |
+| 1 | 037 博主总览看板接口 | 2 小时 | `GET /api/v1/dashboards/bloggers` |
+| 2 | 038 基金分布看板接口 | 2 小时 | `GET /api/v1/dashboards/funds` |
+| 3 | 039 近期操作统计接口 | 2 小时 | `GET /api/v1/dashboards/recent-operations` |
+| 4 | 040 功能闭环验收与文档同步 | 2 小时 | `docs/backend/design/day9-delivery-checklist.md` |
+
+合计 8 小时。
+
+### 第 9 天的接口契约
+
+看板的接口文档已经写好，前后端共用：
+
+```text
+docs/api/v1-dashboards.md
+```
+
+任务 037–039 都以它为准。任务 040 只做验收和文档差异核对。开发过程中发现文档说不通的地方，反馈，不要自己改。
 
 第 9 天目标：第一版功能闭环可以交给前端展示。
 
@@ -270,7 +307,54 @@ docs/backend/tasks/021-operation-query-api.md
 docs/backend/tasks/022-delete-operation-and-tests.md
 ```
 
-第 6 天及以后的任务文档会在前一天验收通过后生成。
+第 6 天的六个任务文件：
+
+```text
+docs/backend/tasks/023-common-pagination-and-sort-validation.md
+docs/backend/tasks/024-nav-history-table-design.md
+docs/backend/tasks/025-nav-history-table-create-and-init.md
+docs/backend/tasks/026-manual-nav-history-api.md
+docs/backend/tasks/027-nav-history-csv-parse-and-validate.md
+docs/backend/tasks/028-nav-history-csv-import-api.md
+```
+
+第 8 天的四个任务文件：
+
+```text
+docs/backend/tasks/033-return-calculation-service.md
+docs/backend/tasks/034-blogger-returns-api.md
+docs/backend/tasks/035-fund-return-api.md
+docs/backend/tasks/036-total-returns-api.md
+```
+
+第 7 天的四个任务文件：
+
+```text
+docs/backend/tasks/029-snapshot-date-and-nav-query-tools.md
+docs/backend/tasks/030-position-snapshot-calculation.md
+docs/backend/tasks/031-position-snapshot-api.md
+docs/backend/tasks/032-position-snapshot-tests.md
+```
+
+第 8 天的四个任务文件：
+
+```text
+docs/backend/tasks/033-return-calculation-service.md
+docs/backend/tasks/034-blogger-returns-api.md
+docs/backend/tasks/035-fund-return-api.md
+docs/backend/tasks/036-total-returns-api.md
+```
+
+第 9 天的四个任务文件：
+
+```text
+docs/backend/tasks/037-blogger-overview-dashboard-api.md
+docs/backend/tasks/038-fund-distribution-dashboard-api.md
+docs/backend/tasks/039-recent-operations-statistics-api.md
+docs/backend/tasks/040-delivery-check-and-doc-sync.md
+```
+
+第 5–9 天任务文档已全部生成。后续阶段要另外创建新的计划文档，不要在当前 40 小时计划里私自扩展任务。
 
 ## 验收节奏
 
