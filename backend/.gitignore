@@ -21,3 +21,6 @@ logs/
 .idea/
 .vscode/
 .DS_Store
+
+# test/ignore
+backend/test.json
