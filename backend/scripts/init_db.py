@@ -8,7 +8,11 @@ from pymysql import connect
 from app.config import DB_CONFIG
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SQL_PATH = BASE_DIR / "database" / "v1-basic-management.sql"
+SQL_PATHS = [
+    BASE_DIR / "database" / "v1-basic-management.sql",
+    BASE_DIR / "database" / "v2-operations.sql",
+    BASE_DIR / "database" / "v3-nav-history.sql",
+]
 
 def create_datebase():
     server_config = DB_CONFIG.copy()
@@ -31,22 +35,29 @@ def create_datebase():
         conn.close()
 
 def create_table():
-    sql = SQL_PATH.read_text(encoding='utf-8')
-    # 列表推导式
-    statements = [item.strip() for item in sql.split(";") if item.strip()]
-
-    conn = connect(**DB_CONFIG) 
+    conn = connect(**DB_CONFIG)
 
     try:
         with conn.cursor() as cursor:
-            for statement in statements:
-                cursor.execute(statement)
+            for sql_path in SQL_PATHS:
+                if not sql_path.exists():
+                    raise FileNotFoundError(f"SQL file not found: {sql_path}")
 
-            cursor.execute('SHOW TABLES')
+                sql = sql_path.read_text(encoding="utf-8")
+                statements = [
+                    item.strip()
+                    for item in sql.split(";")
+                    if item.strip()
+                ]
+
+                for statement in statements:
+                    cursor.execute(statement)
+
+            cursor.execute("SHOW TABLES")
             tables = cursor.fetchall()
 
         conn.commit()
-        print('Create tables:')
+        print("Created tables:")
         for row in tables:
             print(dict(row))
     finally:
@@ -56,5 +67,6 @@ def main():
     create_datebase()
     create_table()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

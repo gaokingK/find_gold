@@ -1,11 +1,13 @@
 # 数据库查询
 
-from datetime import date
+from datetime import date, datetime
 
 from flask import Blueprint, request
+from pymysql.err import IntegrityError
 
 from app.db import get_connection
 from app.utils.responses import error, success
+from app.utils.list_params import parse_list_query_params
 
 bloggers_bp = Blueprint("bloggers", __name__)
 
@@ -16,12 +18,84 @@ ALLOWED_SORT_FIELDS = {
     'created_at': 'b.created_at'
 }
 
+def parse_create_blogger_payload():
+    data = request.get_json(silent=True)
+
+    print("DEBUG DATA:", data)
+    if not isinstance(data, dict):
+        return None, error(
+            code='VALIDATION_ERROR',
+            message='请求体必须是JOSN对象',
+            details=[],
+            http_status=400
+        )
+
+    name = data.get('name')
+    sector = data.get('sector')
+    observe_start_date = data.get('observe_start_date')
+
+    details = []
+
+# 进行数据校验，非空校验，和类型校验
+    if not isinstance(name, str) or not name.strip():
+        details.append(
+            {
+                'field': 'name',
+                'message': 'blogger not be empty'
+            }
+        )
+
+    if not isinstance(sector, str) or not sector.strip():
+        details.append(
+            {
+                'field': 'sector',
+                'message': '所属板块不能为空'
+            }
+        )
+
+    parsed_date = None
+
+    if not isinstance(observe_start_date, str) or not observe_start_date.strip():
+        details.append(
+            {
+                'field': 'observe_start_date',
+                'message': '观察开始日不能为空'
+            }
+        )
+    else:
+        try:
+            parsed_date = datetime.strptime(
+                observe_start_date,
+                '%Y-%m-%d'
+            ).date()
+        except ValueError:
+            details.append(
+                {
+                    'field': 'observe_start_date',
+                    'message': '观察开始日格式必须为YYYY-MM-DD'
+                }
+            )
+
+    if details:
+        return None, error(
+            code='VALIDATION_ERROR',
+            message='参数校验失败',
+            details=details,
+            http_status=400
+        )
+
+    return {
+        'name': name.strip(),
+        'sector': sector.strip(),
+        'observe_start_date': parsed_date
+    }, None
+
 def calculate_status(observe_days):
     if observe_days is None:
         return 'inactive'
 
     if observe_days < 30:
-        return 'obsering'
+        return 'observing'
 
     return 'active'
 
@@ -42,104 +116,51 @@ def serialize_blogger(row):
     }
 
 def parse_common_params():
-    keyword = request.args.get('keyword', '').strip()
-    sector = request.args.get('sector', '').strip()
-    status = request.args.get('status', '').strip()
-    sort_by = request.args.get('sort_by', 'created_at')
-    order = request.args.get('order', 'desc').lower()
+    details = []
+    keyword = request.args.get("keyword", "").strip()
+    sector = request.args.get("sector", "").strip()
+    status = request.args.get("status", "").strip()
 
-    try:
-        page = int(request.args.get('page', '1'))
-        page_size = int(request.args.get('page_size', '20'))
-    except ValueError:
+    if status and status not in ["observing", "active"]:
+        details.append(
+            {
+                "field": "status",
+                "message": "status 只允许observing或active"
+            }
+        )
+
+    raw_order = request.args.get("order")
+    if raw_order:
+        request.args = request.args.copy()
+        request.args["order"] = raw_order.lower()
+
+    common_params, common_details = parse_list_query_params(
+        default_sort_by="created_at",
+        allowed_sort_fields=ALLOWED_SORT_FIELDS,
+        default_order="desc"
+    )
+    details.extend(common_details)
+
+    if details:
         return None, error(
-            code='VALIDATION_ERROR',
-            message='分页参数不合法',
-            details=[
-                {
-                    'field': 'page/page_size',
-                    'message': 'page and page_size must be int'
-                }
-            ],
+            code="VALIDATION_ERROR",
+            message="参数校验失败",
+            details=details,
             http_status=400
         )
 
-    if page < 1:
-        return None, error(
-            code='VALIDATION_ERROR',
-            message='page参数不合法',
-            details=[
-                {
-                    'field': 'page', 
-                    'message': 'page must be > 1'
-                }
-            ],
-            http_status=400
-        )
-
-    if page_size < 1 or page_size > 100:
-        return None, error(
-            code='VALIDATION_ERROR',
-            message='page_size参数不合法',
-            details=[
-                {
-                    'field': 'page_size',
-                    'message': 'page_size must be between 1 and 100'
-                }
-            ],
-            http_status=400
-        )
-
-    if status and status not in ['observing', 'active']:
-        return None, error(
-            code='VALIDATION_ERROR',
-            message='status不合法',
-            details=[
-                {
-                    'field': 'status',
-                    'message': 'status allow observing or active'
-                }
-            ],
-            http_status=400
-        )
-
-    if sort_by not in ALLOWED_SORT_FIELDS:
-        return None, error(
-            code='VALIDATION_ERROR',
-            message='sort_by 参数不合法',
-            details=[
-                {
-                    'field': 'sort_by',
-                    'message': 'sort_by allow name, observe_start_date, observe_days, created_at'
-                }
-            ],
-            http_status=400
-        )
-
-    if order not in ['asc', 'desc']:
-        return None, error(
-            code='VALIDATION_ERROR',
-            message='order parse不合法',
-            details=[
-                {
-                    'field': 'order',
-                    'message': 'order allow asc or desc'
-                }
-            ],
-            http_status=400
-        )
-
-    params = {
-        'keyword': keyword,
-        'sector': sector,
-        'status': status,
-        'sort_by': sort_by,
-        'order': order,
-        'page': page,
-        'page_size': page_size
-    }
-    return params, None
-
+    return {
+        "keyword": keyword,
+        "sector": sector,
+        "status": status,
+        "sort_column": common_params["sort_column"],
+        "order": common_params["order"],
+        "page": common_params["page"],
+        "page_size": common_params["page_size"],
+        "offset": common_params["offset"]
+    }, None
+ 
+# 动态构建SQL查询的WHERE子句机器对应的参数列表
 def build_conditions(params):
     conditions = []
     values = []
@@ -169,9 +190,10 @@ def list_bloggers():
         return error_response
 
     where_sql, values = build_conditions(params)
-    sort_column = ALLOWED_SORT_FIELDS[params['sort_by']]
+
+    sort_column = params["sort_column"]
     order_sql = 'ASC' if params['order'] == 'asc' else 'DESC'
-    offset = (params['page'] - 1) * params['page_size']
+    offset = params["offset"]
 
     conn = get_connection()
 
@@ -210,3 +232,323 @@ def list_bloggers():
             'total': total
         }
     )
+
+@bloggers_bp.post('/api/v1/bloggers')
+def create_bloggers():
+    payload, error_response = parse_create_blogger_payload()
+
+    if error_response is not None:
+        return error_response
+
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                'SELECT id FROM bloggers WHERE name = %s', 
+                (payload['name'],)
+            )
+            existing = cursor.fetchone()
+
+            if existing:
+                return error(
+                    code='BLOGGER_NAME_DUPLICATED',
+                    message='博主名称已经存在',
+                    details=[],
+                    http_status=409
+                )
+
+            cursor.execute(
+                """
+                INSERT INTO bloggers (name, sector, observe_start_date)
+                VALUES (%s, %s, %s)
+                """,
+                (
+                    payload['name'],
+                    payload['sector'],
+                    payload['observe_start_date']
+                )
+            )
+            blogger_id = cursor.lastrowid
+
+            cursor.execute(
+                """
+                SELECT
+                    id,
+                    name,
+                    sector,
+                    observe_start_date,
+                    DATEDIFF(CURDATE(), observe_start_date) AS observe_days,
+                    created_at,
+                    updated_at
+                FROM bloggers
+                WHERE id = %s
+                """,
+                (blogger_id,)
+            )
+            row = cursor.fetchone()
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    return success(serialize_blogger(row))
+
+def parse_blogger_id(value):
+    if isinstance(value, bool):
+        return None
+
+    try:
+        blogger_id = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    if blogger_id <= 0:
+        return None
+
+    return blogger_id
+
+def fetch_blogger(cursor, blogger_id):
+    cursor.execute(
+        """
+        SELECT
+            id, 
+            name,
+            sector,
+            observe_start_date,
+            DATEDIFF(CURDATE(), observe_start_date) AS observe_days,
+            created_at,
+            updated_at
+        FROM bloggers
+        WHERE id = %s
+        """,
+        (blogger_id,)
+    )
+    row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return serialize_blogger(row)
+
+def parse_update_blogger_payload():
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return None, error(
+            code='VALIDATION_ERROR',
+            message='请求体必须是JSON对象',
+            details=[],
+            http_status=400
+        )
+
+    name = data.get('name')
+    sector = data.get('sector')
+    observe_start_date = data.get('observe_start_date')
+    details= []
+
+    if not isinstance(name, str) or not name.strip():
+        details.append({'field': 'name', 'message': '博主名称不能为空'})
+
+    if not isinstance(sector, str) or not sector.strip():
+        details.append({'field': 'sector', 'message': '所属板块不能为空'})
+
+    if not isinstance(observe_start_date, str):
+        details.append({'field': 'observe_start_date', 'message': '观察开始日不能为空'})
+    else:
+        try:
+            observe_start_date = datetime.strptime(
+                observe_start_date,
+                "%Y-%m-%d"
+            ).date()
+        except ValueError:
+            details.append(
+                {
+                    'field': 'observe_start_date',
+                    'message': '观察开始日格式必须是 YYYY-MM-DD'
+                }
+            )
+
+    if details:
+        return None, error(
+            code='VALIDATION_ERROR',
+            message='参数校验失败',
+            details=details,
+            http_status=400
+        )
+
+    return {
+        'name': name.strip(),
+        'sector': sector.strip(),
+        'observe_start_date': observe_start_date
+    }, None
+
+@bloggers_bp.get('/api/v1/bloggers/<blogger_id>')
+def get_blogger(blogger_id):
+    blogger_id = parse_blogger_id(blogger_id)
+
+    if blogger_id is None:
+        return error(
+            code='VALIDATION_ERROR',
+            message='参数校验失败',
+            details=[
+                {
+                    'field': 'blogger_id',
+                    'message': '博主ID必须为正整数'
+                }
+            ],
+            http_status=400
+        )
+
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            data = fetch_blogger(cursor, blogger_id)
+    finally:
+        conn.close()
+
+    if data is None:
+        return error(
+            code='BLOGGER_NOT_FOUND',
+            message='博主不存在',
+            details=[],
+            http_status=404
+        )
+
+    return success(data=data)
+
+@bloggers_bp.put('/api/v1/bloggers/<blogger_id>')
+def update_blogger(blogger_id):
+    blogger_id = parse_blogger_id(blogger_id)
+
+    if blogger_id is None:
+        return error(
+            code='VALIDATION_ERROR',
+            message='参数校验失败',
+            details=[
+                {
+                    'field': 'blogger_id',
+                    'message': '博主ID必须为正整数'
+                }
+            ],
+            http_status=400
+        )
+
+    payload, error_response = parse_update_blogger_payload()
+
+    if error_response is not None:
+        return error_response
+
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                'SELECT id FROM bloggers WHERE id = %s',
+                (blogger_id,)
+            )
+            row = cursor.fetchone()
+
+            if row is None:
+                return error(
+                    code='BLOGGER_NOT_FOUND',
+                    message='博主不存在',
+                    details=[],
+                    http_status=404
+                )
+
+            cursor.execute(
+                """
+                SELECT id
+                FROM bloggers
+                WHERE name = %s AND id <> %s
+                LIMIT 1
+                """,
+                (payload['name'], blogger_id)
+            )
+            duplicated_row = cursor.fetchone()
+
+            if duplicated_row is not None:
+                return error(
+                    code='BLOGGER_NAME_DUPLICATED',
+                    message='博主名称已存在',
+                    details=[],
+                    http_status=409
+                )
+
+            cursor.execute(
+                """
+                UPDATE bloggers
+                SET name = %s,
+                    sector = %s,
+                    observe_start_date = %s
+                WHERE id = %s
+                """,
+                (
+                    payload['name'],
+                    payload['sector'],
+                    payload['observe_start_date'],
+                    blogger_id
+                )
+            )
+            conn.commit()
+            data = fetch_blogger(cursor, blogger_id)
+    finally:
+        conn.close()
+
+    return success(data=data)
+
+@bloggers_bp.delete('/api/v1/bloggers/<blogger_id>')
+def delete_blogger(blogger_id):
+    blogger_id = parse_blogger_id(blogger_id)
+
+    if blogger_id is None:
+        return error(
+            code='VALIDATION_ERROR',
+            message='参数校验失败',
+            details=[
+                {
+                    'field': 'blogger_id',
+                    'message': '博主ID必须为正整数'
+                }
+            ],
+            http_status=400
+        )
+
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                'SELECT id FROM bloggers WHERE id = %s',
+                (blogger_id,)
+            )
+            row = cursor.fetchone()
+
+            if row is None:
+                return error(
+                    code='BLOGGER_NOT_FOUND',
+                    message='博主不存在',
+                    details=[],
+                    http_status=404
+                )
+
+            cursor.execute(
+                'DELETE FROM operations WHERE blogger_id = %s',
+                (blogger_id,)
+            )
+
+            cursor.execute(
+                'DELETE FROM initial_positions WHERE blogger_id = %s',
+                (blogger_id,)
+            )
+            cursor.execute(
+                'DELETE FROM bloggers WHERE id = %s',
+                (blogger_id,)
+            )
+            conn.commit()
+    finally:
+        conn.close()
+
+    return success(data={})
