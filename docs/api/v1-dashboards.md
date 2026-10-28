@@ -56,6 +56,16 @@
 
 ---
 
+### 1.4 null 口径的分层说明
+
+`null` 规则按三个层级执行，逐层向上"污染"。权威定义在 `docs/api/v1-returns.md` 2.4 节 null 真值表，本节是它在本接口的展开，**两者冲突时以 returns 的真值表为准**。
+
+1. **基金级**：缺净值的基金，自己的 `nav` / `nav_date` / `market_value` / `profit_amount` / `return_rate` / `market_value_ratio` 为 `null`；有净值的基金照实返回自己的数值。
+2. **博主级**：某博主名下**任意**一只基金缺净值，该博主的合计 `total_market_value` / `profit_amount` / `return_rate` 为 `null`。
+3. **全局级**：**任意**一只基金缺净值，`data.total_market_value` / `profit_amount` / `return_rate` 为 `null`，且 `/dashboards/funds` 中**所有**基金的 `market_value_ratio` 为 `null`（占比的分母不完整）。
+
+成本类字段（`cost_amount`、`total_cost_amount`、`cost_ratio`）不依赖净值，任何情况下都照实返回。
+
 ## 2. 接口总览
 
 | 序号 | 接口 | 方法 | 路径 |
@@ -666,6 +676,13 @@ HTTP 状态码 `200`：
 7. `*_count` 是整数；`*_shares` 和 `*_amount` 是金额类数字，即使是 `0` 也按小数位返回（份额 4 位、金额 2 位）。
 8. `dividend_cash` 不统计份额，因为现金分红不改变份额。
 9. 第一版不区分操作记录编辑后的影响，因为操作记录当前没有编辑接口。
+10. 只传 `start_date` 不传 `end_date` 时，`end_date` 默认今天；若 `start_date` 晚于今天，返回 400 / `VALIDATION_ERROR`（违反"开始日期不能晚于结束日期"）。
+11. 只传 `end_date` 不传 `start_date` 时，`start_date = end_date - 6`。
+12. 两个都不传时，`end_date = 今天`，`start_date = 今天 - 6`，共 7 天（含今天）。
+13. `limit` 超出 1–100 时返回 400 / `VALIDATION_ERROR`。
+14. `items` 为空时返回空数组 `[]`，不返回 `null`。
+15. `summary` 统计的是日期范围内的**全量**操作记录，不受 `limit` 影响，因此 `items` 的条数可以小于 `summary.operation_count`。
+16. `start_date` 也不得晚于今天（与 `end_date` 同一约束）。
 
 ### 关联接口
 
